@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Pagination, Tabs } from 'antd';
+import { Tabs } from 'antd';
 
 import FilmList from '../film-list';
 import { GenresProvider } from '../genres-context/genres-context';
@@ -31,23 +31,21 @@ export default class App extends Component {
   async componentDidMount() {
     window.addEventListener('online', this.handleOnlineStatus);
     window.addEventListener('offline', this.handleOnlineStatus);
-    try {
-      localStorage.clear();
 
-      const [sessionResponse, genresResponse] = await Promise.all([
-        this.tmdbService.createGuestSession(),
-        this.tmdbService.getGenres(),
-      ]);
-
-      this.setState({
-        sessionId: sessionResponse.guest_session_id,
-        genres: genresResponse,
-      });
-
-      await this.setData(this.state.searchText);
-    } catch (error) {
-      console.error('Ошибка при загрузке данных:', error);
+    let sessionId = localStorage.getItem('guestSessionId');
+    if (!sessionId) {
+      const sessionResponse = await this.tmdbService.createGuestSession();
+      sessionId = sessionResponse.guest_session_id;
+      localStorage.setItem('guestSessionId', sessionId);
     }
+    const genresResponse = await this.tmdbService.getGenres();
+
+    this.setState({
+      sessionId: sessionId,
+      genres: genresResponse,
+    });
+
+    await this.setTabData(this.state.searchText);
   }
 
   componentWillUnmount() {
@@ -56,10 +54,10 @@ export default class App extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    const { current, search } = this.state;
+    const { current, search, searchText } = this.state;
 
     if (current !== prevState.current) {
-      search ? this.setData() : this.setRatedData();
+      search ? this.setTabData(searchText) : this.setTabRated();
     }
   }
 
@@ -69,7 +67,7 @@ export default class App extends Component {
         searchText: text,
         current: 1,
       });
-      this.setData(text);
+      this.setTabData(text);
     }
   };
 
@@ -80,63 +78,28 @@ export default class App extends Component {
     });
   };
 
-  renderList = (res, text = 'Sherlock Holmes') => {
-    let [filmList, totalPages] = res;
+  renderList = (filmList, totalPages) => {
     return filmList.forEach((item) => {
       this.setState(({ data }) => {
         return {
           data: [this.createItem(item), ...data],
           totalPages: totalPages * 10,
-          searchText: text,
         };
       });
     });
   };
 
-  async setRatedData() {
-    try {
-      this.cleanData();
-      const res = await this.tmdbService.getRated(this.state.sessionId, this.state.current);
-      this.renderList(res);
-    } catch (error) {
-      if (!navigator.onLine) this.onError();
-    } finally {
-      this.setState({ loading: false });
-    }
-  }
-
-  async setData(text = this.state.searchText) {
-    try {
-      this.cleanData();
-      const res = await this.tmdbService.getResource(text, this.state.current);
-      this.renderList(res, text);
-    } catch (error) {
-      if (!navigator.onLine) this.onError();
-    } finally {
-      this.setState({ loading: false });
-    }
-  }
-
   createItem(info) {
-    const {
-      title: name,
-      release_date: date,
-      genre_ids: genresId,
-      overview: description,
-      poster_path: posterPath,
-      id,
-      vote_average,
-    } = info;
-
+    const { release_date: date, overview: description, id } = info;
     return {
-      name,
+      name: info.title,
       date: date?.replace(/-/g, ',') || 'Unknown date',
-      genresId,
+      genresId: info.genre_ids,
       description: description || 'Description not found',
-      posterPath,
+      posterPath: info.poster_path,
       id,
-      vote_average,
-      rate: 0,
+      vote_average: info.vote_average,
+      rate: info.rating || 0,
     };
   }
 
@@ -148,52 +111,104 @@ export default class App extends Component {
         search: !isRatedTab,
         current: 1,
       },
-      isRatedTab ? this.setRatedData : this.setData
+      async () => {
+        if (isRatedTab) {
+          await this.setTabRated();
+        } else {
+          await this.setTabData(this.state.searchText); // Обновляем данные поиска
+        }
+      }
     );
+  };
+  pageChange = (page) => {
+    this.setState({ current: page });
+  };
+
+  async setTabRated() {
+    try {
+      this.cleanData();
+      const [filmList, totalPages] = await this.tmdbService.getRated(this.state.sessionId, this.state.current);
+
+      this.renderList(filmList, totalPages);
+    } catch (error) {
+      if (!navigator.onLine) this.onError();
+    } finally {
+      this.setState({ loading: false });
+    }
+  }
+
+  setTabData = async (text) => {
+    try {
+      this.cleanData();
+      let [filmList, totalPages] = await this.tmdbService.getResource(text, this.state.current);
+
+      this.renderList(filmList, totalPages);
+    } catch (error) {
+      if (!navigator.onLine) this.onError();
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  rateFilm = async (rateFimlId, value) => {
+    const { sessionId, data } = this.state;
+
+    await this.tmdbService.rateFilm(rateFimlId, value, sessionId);
+
+    const updatedData = data.map((film) => (film.id === rateFimlId ? { ...film, rate: value } : film));
+    this.setState({ data: updatedData });
   };
 
   render() {
-    const { loading, error, totalPages, current, sessionId, data, genres } = this.state;
-
-    const pagination = (
-      <Pagination
-        onChange={(page) => this.setState({ current: page })}
-        current={current}
-        total={totalPages}
-        defaultCurrent={1}
-      />
-    );
-
-    const filmList = loading ? <Spinner /> : <FilmList pagination={pagination} sessionId={sessionId} data={data} />;
-    const errorMessage = error && <OfflineMessage />;
-
-    const tabItems = [
-      {
-        key: '1',
-        label: 'Search',
-        children: (
-          <div className="search-or-rated">
-            <SearchField newSearch={this.newSearch} cleanData={this.cleanData} />
-            {errorMessage}
-            {filmList}
-          </div>
-        ),
-      },
-      {
-        key: '2',
-        label: 'Rated',
-        children: (
-          <>
-            {errorMessage}
-            {filmList}
-          </>
-        ),
-      },
-    ];
-
+    const { loading, error, totalPages, current, data, genres } = this.state;
     return (
       <GenresProvider value={genres}>
-        <Tabs onChange={this.onChange} items={tabItems} />
+        <Tabs
+          onChange={this.onChange}
+          items={[
+            {
+              key: '1',
+              label: 'Search',
+              children: (
+                <div className="search-or-rated">
+                  <SearchField newSearch={this.newSearch} cleanData={this.cleanData} />
+                  {error && <OfflineMessage />}
+                  {loading ? (
+                    <Spinner />
+                  ) : (
+                    <FilmList
+                      pageChange={this.pageChange}
+                      current={current}
+                      total={totalPages}
+                      data={data}
+                      rateFilm={this.rateFilm}
+                    />
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: '2',
+              label: 'Rated',
+              children: (
+                <>
+                  {error && <OfflineMessage />}
+                  {loading ? (
+                    <Spinner />
+                  ) : (
+                    <FilmList
+                      pageChange={this.pageChange}
+                      current={current}
+                      total={totalPages}
+                      data={data}
+                      rateFilm={this.rateFilm}
+                    />
+                  )}
+                </>
+              ),
+            },
+          ]}
+        />
       </GenresProvider>
     );
   }

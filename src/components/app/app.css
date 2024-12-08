@@ -6,14 +6,18 @@
     right: 0;
     margin: auto;
 }
+.ant-tabs {
+    max-width: 1010px;
+    min-width: 420px;
+    justify-content: center;
+}
 
 .ant-tabs-nav-wrap {
     display: flex;
     justify-content: center;
     background-color: #FFFFFF;
-    width: 1010px;
     height: 70px;
-    padding-bottom: 0;
+    padding-bottom: 10px;
     padding-top: 20px;
 }
 
@@ -32,18 +36,3 @@
 .ant-tabs-nav-wrap-red {
     background-color: red;
 }
-
-@media (max-width: 420px) {
-    .ant-tabs .ant-tabs-top .ant-tabs-mobile {
-        width: 420px;
-        justify-content: center;
-    }
-
-    .ant-tabs-nav-wrap {
-        width: 420px;
-        justify-content: center;
-    }
-}
-
-
-

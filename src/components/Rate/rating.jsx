@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 
 export default class Rating extends Component {
   render() {
-    const { rateFilm, id } = this.props;
-    return <Rate defaultValue={localStorage.getItem(id)} count={10} onChange={rateFilm} className="stars" />;
+    const { rateFilm, movieId, rate } = this.props;
+    return <Rate value={rate} count={10} onChange={(value) => rateFilm(movieId, value)} className="stars" />;
   }
 }
