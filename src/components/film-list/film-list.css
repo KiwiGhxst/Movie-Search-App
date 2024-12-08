@@ -13,12 +13,6 @@
     min-width: 420px;
     height: auto;
     box-sizing: border-box;
-    background-color: #FFFFFF;
-}
-
-.film-list-pagination {
-    background-color: #FFFFFF;
-    padding-bottom: 20px;
 }
 
 .pagination {

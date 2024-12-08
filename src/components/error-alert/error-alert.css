@@ -1,8 +1,8 @@
 .alert {
-    width: 100%;
+    width: 85%;
     display: flex;
     justify-content: center;
-    height: 200px;
+    height: 100px;
     background-color: #FFFFFF;
 }
 
@@ -10,14 +10,4 @@
     .alert {
         max-width: 388px;
     }
-
-    .ant-tabs-content-holder{
-        background-color: #FFFFFF;
-    }
-
-    .ant-tabs-tabpane .ant-tabs-tabpane-active .search-or-rated {
-        display: flex;
-        justify-content: center;
-    }
-
 }

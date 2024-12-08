@@ -6,16 +6,13 @@
     right: 0;
     margin: auto;
 }
-.ant-tabs {
-    max-width: 1010px;
-    min-width: 420px;
-    justify-content: center;
-}
 
 .ant-tabs-nav-wrap {
     display: flex;
     justify-content: center;
     background-color: #FFFFFF;
+    max-width: 1010px;
+    min-width: 720px;
     height: 70px;
     padding-bottom: 10px;
     padding-top: 20px;
@@ -29,10 +26,6 @@
     display: none;
 }
 
-.ant-pagination-options {
-    display: none;
-}
-
-.ant-tabs-nav-wrap-red {
-    background-color: red;
+.ant-tabs-content-holder{
+    background-color: #FFFFFF;
 }

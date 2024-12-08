@@ -158,6 +158,9 @@ export default class App extends Component {
     const updatedData = data.map((film) => (film.id === rateFimlId ? { ...film, rate: value } : film));
     this.setState({ data: updatedData });
   };
+  onError = () => {
+    this.setState({ error: true });
+  };
 
   render() {
     const { loading, error, totalPages, current, data, genres } = this.state;
