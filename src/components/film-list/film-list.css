@@ -4,7 +4,6 @@
 
 .film-list {
     padding: 0;
-    margin: 0 5px;
     display: flex;
     justify-content: center;
     gap: 32px;
